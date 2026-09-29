@@ -1,102 +1,94 @@
-"""Configuración centralizada y gestor estricto de prompts externos.
-
-Este módulo carga variables de entorno mediante Pydantic Settings y ofrece un
-PromptLoader desacoplado que prohíbe cualquier fallback hardcodeado.
+"""
+Módulo de Configuración Central y Gestor de Prompts Externalizados.
 """
 
-from functools import lru_cache
 from pathlib import Path
-from typing import Literal
-
+from typing import Dict, List
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+PROJECT_ROOT = Path(__file__).resolve().parent.parent.parent
+
 
 class Settings(BaseSettings):
-    """Configuración global de la aplicación validada en tiempo de arranque."""
-
+    """Configuración global del sistema con soporte para mayúsculas y minúsculas."""
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=str(PROJECT_ROOT / ".env"),
         env_file_encoding="utf-8",
         extra="ignore",
+        case_sensitive=False
     )
 
-    # API Keys & Modelo LLM (Regla 2: gemini-3.8-flash)
-    GEMINI_API_KEY: str = Field(
-        ...,
-        description="Clave de acceso a la API de Google Gemini.",
-    )
-    MODEL_NAME: str = Field(
-        default="gemini-3.8-flash",
-        description="Identificador estricto del modelo LLM de Google.",
-    )
+    # Credenciales y Modelo LLM
+    gemini_api_key: str = Field(default="", description="API Key de Google Gemini")
+    llm_model: str = Field(default="gemini-3.8-flash", description="Modelo LLM")
 
-    # Configuración de Red
-    BACKEND_HOST: str = Field(default="0.0.0.0")
-    BACKEND_PORT: int = Field(default=8000)
-    FRONTEND_PORT: int = Field(default=8501)
+    # Servidor
+    backend_host: str = Field(default="0.0.0.0")
+    backend_port: int = Field(default=8000)
+    frontend_port: int = Field(default=8501)
+    api_base_url: str = Field(default="http://localhost:8000")
 
-    # Logging
-    LOG_LEVEL: Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"] = Field(
-        default="INFO",
-    )
-    ENVIRONMENT: Literal["development", "production", "test"] = Field(
-        default="development",
-    )
+    # Logging y Entorno
+    log_level: str = Field(default="INFO")
+    environment: str = Field(default="development")
 
-    # Directorios Base del Proyecto
-    BASE_DIR: Path = Path(__file__).resolve().parent.parent.parent
-    DATA_DIR: Path = BASE_DIR / "data"
-    PROMPTS_DIR: Path = DATA_DIR / "prompts"
+    # Rutas
+    prompts_dir: Path = Field(default=PROJECT_ROOT / "data" / "prompts")
+
+    # Aliases de compatibilidad para accesos en mayúsculas
+    @property
+    def LLM_MODEL(self) -> str:
+        return self.llm_model
+
+    @property
+    def GEMINI_API_KEY(self) -> str:
+        return self.gemini_api_key
+
+    @property
+    def LOG_LEVEL(self) -> str:
+        return self.log_level
+
+    @property
+    def ENVIRONMENT(self) -> str:
+        return self.environment
 
 
 class PromptLoader:
-    """Cargador centralizado y estricto de plantillas de prompts externos.
+    """Carga y valida los prompts externalizados en data/prompts/."""
 
-    Garantiza el cumplimiento de la Regla 1: ningún prompt puede estar
-    hardcodeado en Python. Si el archivo no existe, falla inmediatamente sin fallback.
-    """
+    REQUIRED_PROMPT_FILES: List[str] = [
+        "classifier_guardrail.txt",
+        "inconsistencies.txt",
+        "standards.txt",
+        "test_cases.txt",
+        "reverse_engineering.txt",
+        "unit_tests.txt"
+    ]
 
     def __init__(self, prompts_directory: Path) -> None:
-        self._prompts_directory = prompts_directory
+        self.prompts_directory = prompts_directory
+        self._cache: Dict[str, str] = {}
 
-    @lru_cache(maxsize=32)
-    def load(self, prompt_filename: str) -> str:
-        """Carga el contenido de un prompt externo desde el directorio data/prompts/.
+    def get_prompt(self, filename: str) -> str:
+        if filename in self._cache:
+            return self._cache[filename]
 
-        Args:
-            prompt_filename: Nombre del archivo dentro de data/prompts/ (ej. 'classifier_guardrail.txt').
-
-        Returns:
-            Contenido textual completo del prompt.
-
-        Raises:
-            FileNotFoundError: Si el archivo no existe o no es accesible.
-            ValueError: Si el archivo está vacío.
-        """
-        prompt_path = self._prompts_directory / prompt_filename
-
+        prompt_path = self.prompts_directory / filename
         if not prompt_path.is_file():
-            raise FileNotFoundError(
-                f"[REGLA 1 VIOLADA] El archivo de prompt requerido '{prompt_filename}' "
-                f"NO fue encontrado en '{self._prompts_directory}'. Está estrictamente "
-                "prohibido definir cadenas de prompts por defecto en el código Python."
-            )
+            raise FileNotFoundError(f"[ERROR] No existe el prompt: {prompt_path}")
 
         content = prompt_path.read_text(encoding="utf-8").strip()
-
         if not content:
-            raise ValueError(
-                f"[ERROR DE PROMPT] El archivo de prompt '{prompt_filename}' existe pero está vacío."
-            )
+            raise ValueError(f"[ERROR] El prompt {filename} está vacío.")
 
+        self._cache[filename] = content
         return content
 
-    def clear_cache(self) -> None:
-        """Limpia la caché de prompts (útil para pruebas y recarga en caliente)."""
-        self.load.cache_clear()
+    def validate_all_prompts(self) -> None:
+        for filename in self.REQUIRED_PROMPT_FILES:
+            self.get_prompt(filename)
 
 
-# Instancias Singleton para reutilización en todo el proyecto
 settings = Settings()
-prompt_loader = PromptLoader(prompts_directory=settings.PROMPTS_DIR)
+prompt_loader = PromptLoader(prompts_directory=settings.prompts_dir)

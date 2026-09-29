@@ -1,16 +1,17 @@
-"""Sistema de logging estructurado para Intelligent QA.
-
-Provee trazabilidad completa de metadatos de archivos, veredictos de clasificación,
+"""
+Sistema de logging estructurado para Intelligent QA.
+Provee trazabilidad de metadatos, veredictos de clasificación,
 latencias de inferencia, llamadas al LLM y excepciones.
 """
 
 import json
 import logging
+import os
 import sys
 import time
 from contextlib import contextmanager
 from datetime import datetime, timezone
-from typing import Any, Generator
+from typing import Any, Dict, Generator, Optional
 
 from src.core.config import settings
 
@@ -19,15 +20,15 @@ class StructuredJsonFormatter(logging.Formatter):
     """Formateador que serializa registros de log en formato JSON estructurado."""
 
     def format(self, record: logging.LogRecord) -> str:
+        env_value = getattr(settings, "ENVIRONMENT", getattr(settings, "environment", "development"))
         log_entry: dict[str, Any] = {
             "timestamp": datetime.now(timezone.utc).isoformat(),
             "level": record.levelname,
             "logger": record.name,
             "message": record.getMessage(),
-            "environment": settings.ENVIRONMENT,
+            "environment": env_value,
         }
 
-        # Extraer metadatos contextuales si fueron pasados en 'extra'
         if hasattr(record, "metadata") and isinstance(record.metadata, dict):
             log_entry["metadata"] = record.metadata
 
@@ -40,12 +41,12 @@ class StructuredJsonFormatter(logging.Formatter):
 def setup_logger(name: str = "intelligent_qa") -> logging.Logger:
     """Configura y retorna el logger centralizado con salida estructurada."""
     logger_instance = logging.getLogger(name)
-    logger_instance.setLevel(settings.LOG_LEVEL.upper())
+    level_str = getattr(settings, "LOG_LEVEL", getattr(settings, "log_level", "INFO")).upper()
+    logger_instance.setLevel(getattr(logging, level_str, logging.INFO))
 
-    # Evitar duplicar handlers en reinicios o tests
     if not logger_instance.handlers:
         console_handler = logging.StreamHandler(sys.stdout)
-        console_handler.setLevel(settings.LOG_LEVEL.upper())
+        console_handler.setLevel(getattr(logging, level_str, logging.INFO))
         console_handler.setFormatter(StructuredJsonFormatter())
         logger_instance.addHandler(console_handler)
 
@@ -53,91 +54,95 @@ def setup_logger(name: str = "intelligent_qa") -> logging.Logger:
     return logger_instance
 
 
-class AppLogger:
-    """Clase envoltorio con métodos semánticos para el pipeline de QA."""
+# Instancia base del logger
+logger = setup_logger()
+get_logger = setup_logger
 
-    def __init__(self, base_logger: logging.Logger) -> None:
-        self._logger = base_logger
 
-    def info(self, message: str, **kwargs: Any) -> None:
-        self._logger.info(message, extra={"metadata": kwargs} if kwargs else None)
+class StructuredLogger:
+    """
+    Fachada requerida por el clasificador, agentes y backend para trazar eventos.
+    """
 
-    def warning(self, message: str, **kwargs: Any) -> None:
-        self._logger.warning(message, extra={"metadata": kwargs} if kwargs else None)
+    @staticmethod
+    def log_file_metadata(filename: str, size_bytes: int, extension: str) -> None:
+        payload = {
+            "event": "FILE_UPLOAD_RECEIVED",
+            "filename": filename,
+            "size_bytes": size_bytes,
+            "extension": extension
+        }
+        logger.info(f"[METADATA] Archivo recibido: {filename}", extra={"metadata": payload})
 
-    def error(self, message: str, exc_info: bool = False, **kwargs: Any) -> None:
-        self._logger.error(
-            message,
-            exc_info=exc_info,
-            extra={"metadata": kwargs} if kwargs else None,
-        )
-
-    def log_file_received(self, filename: str, file_size_bytes: int, extension: str) -> None:
-        """Registra la recepción de un documento o archivo de código."""
-        self.info(
-            "Archivo recibido para procesamiento",
-            event="FILE_RECEIVED",
-            filename=filename,
-            file_size_bytes=file_size_bytes,
-            extension=extension,
-        )
-
-    def log_classification_verdict(
-        self,
+    @staticmethod
+    def log_classification(
         filename: str,
         verdict: str,
-        is_accepted: bool,
-        rejection_reason: str | None = None,
+        confidence_or_reason: Optional[str] = None
     ) -> None:
-        """Registra el resultado del guardrail de clasificación."""
-        self.info(
-            "Veredicto de clasificación emitido por el Guardrail",
-            event="CLASSIFICATION_VERDICT",
-            filename=filename,
-            verdict=verdict,
-            is_accepted=is_accepted,
-            rejection_reason=rejection_reason,
-        )
+        payload = {
+            "event": "CLASSIFICATION_VERDICT",
+            "filename": filename,
+            "verdict": verdict,
+            "details": confidence_or_reason or "N/A"
+        }
+        msg = f"[CLASSIFIER] Veredicto: {verdict} para {filename}"
+        if verdict == "INVALID":
+            logger.warning(msg, extra={"metadata": payload})
+        else:
+            logger.info(msg, extra={"metadata": payload})
 
+    @staticmethod
     def log_llm_call(
-        self,
+        agent_name: str,
         task: str,
-        model: str,
-        prompt_name: str,
         duration_seconds: float,
+        success: bool,
+        extra: Optional[Dict[str, Any]] = None
     ) -> None:
-        """Registra la invocación a la API de Gemini con sus métricas."""
-        self.info(
-            "Invocación de LLM completada",
-            event="LLM_CALL",
+        payload = {
+            "event": "LLM_EXECUTION",
+            "agent": agent_name,
+            "task": task,
+            "duration_sec": round(duration_seconds, 3),
+            "success": success,
+            "metadata": extra or {}
+        }
+        msg = f"[LLM_CALL] {agent_name} ejecutó {task} ({payload['duration_sec']}s)"
+        if success:
+            logger.info(msg, extra={"metadata": payload})
+        else:
+            logger.error(msg, extra={"metadata": payload})
+
+    @staticmethod
+    def log_error(context_message: str, error: Exception) -> None:
+        payload = {
+            "event": "APPLICATION_ERROR",
+            "context": context_message,
+            "error_type": error.__class__.__name__,
+            "error_message": str(error)
+        }
+        logger.error(f"[ERROR] {context_message}", exc_info=True, extra={"metadata": payload})
+
+
+@contextmanager
+def measure_execution_time(agent_name: str, task: str) -> Generator[None, None, None]:
+    """
+    Context manager requerido por las tools y el clasificador para medir latencias.
+    """
+    start_time = time.perf_counter()
+    success = False
+    try:
+        yield
+        success = True
+    except Exception as exc:
+        StructuredLogger.log_error(f"Fallo en ejecución de '{task}' ({agent_name})", exc)
+        raise
+    finally:
+        elapsed = time.perf_counter() - start_time
+        StructuredLogger.log_llm_call(
+            agent_name=agent_name,
             task=task,
-            model=model,
-            prompt_name=prompt_name,
-            duration_seconds=round(duration_seconds, 4),
+            duration_seconds=elapsed,
+            success=success
         )
-
-    @contextmanager
-    def measure_latency(self, operation_name: str) -> Generator[dict[str, float], None, None]:
-        """Context manager para cronometrar latencias de cualquier operación."""
-        start_time = time.perf_counter()
-        metrics: dict[str, float] = {}
-        try:
-            yield metrics
-        finally:
-            elapsed = time.perf_counter() - start_time
-            metrics["elapsed_seconds"] = elapsed
-            self.info(
-                f"Operación finalizada: {operation_name}",
-                event="LATENCY_METRIC",
-                operation=operation_name,
-                duration_seconds=round(elapsed, 4),
-            )
-
-
-# Instancia lista para importar
-logger = AppLogger(setup_logger())
-
-
-def get_logger(module_name: str) -> AppLogger:
-    """Retorna un logger contextualizado por módulo."""
-    return AppLogger(setup_logger(f"intelligent_qa.{module_name}"))

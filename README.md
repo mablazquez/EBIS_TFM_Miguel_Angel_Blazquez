@@ -60,6 +60,7 @@ intelligent-qa/
 ├── .gitignore                       # Filtros de exclusión de Git
 ├── README.md                        # Documentación técnica para evaluación
 ├── requirements.txt                 # Dependencias fijadas del proyecto
+├── leeme.txt                        # Pasos para ejecutar la aplicación
 ├── src/
 │   ├── frontend/                    # Capa de presentación (Streamlit)
 │   │   ├── __init__.py

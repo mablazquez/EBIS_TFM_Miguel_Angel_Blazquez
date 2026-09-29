@@ -118,26 +118,24 @@ class FileClassifier:
         content: str
     ) -> LLMClassificationOutput:
         """
-        Ejecuta la llamada a gemini-3.8-flash inyectando el prompt externalizado.
+        Ejecuta la llamada a gemini-3.8-flash inyectando el prompt externalizado
+        mediante reemplazo seguro para no entrar en conflicto con el JSON schema.
         """
-        prompt = self.prompt_template.format(
-            filename=filename,
-            extension=extension,
-            content=content
+        prompt = (
+            self.prompt_template
+            .replace("{filename}", filename)
+            .replace("{extension}", extension)
+            .replace("{content}", content)
         )
 
         try:
-            # Empleo de Structured Output de LangChain para parseo seguro
             structured_llm = self.llm.with_structured_output(LLMClassificationOutput)
             result = structured_llm.invoke([HumanMessage(content=prompt)])
             return result
         except Exception:
-            # En caso de que el proveedor o modelo no soporte estructurado directo en runtime,
-            # recurre a llamada convencional y parseo de JSON
             raw_response = self.llm.invoke([HumanMessage(content=prompt)])
             raw_text = raw_response.content if hasattr(raw_response, "content") else str(raw_response)
             
-            # Limpieza de posibles bloques markdown ```json ... ```
             cleaned_json = re.sub(r"^```(?:json)?\s*", "", raw_text.strip(), flags=re.MULTILINE)
             cleaned_json = re.sub(r"\s*```$", "", cleaned_json.strip(), flags=re.MULTILINE)
 

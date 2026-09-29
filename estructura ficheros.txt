@@ -3,6 +3,7 @@ intelligent-qa/
 ├── .gitignore
 ├── pytest.ini                 
 ├── README.md
+├── leeme.txt
 ├── requirements.txt
 ├── docs/
 │   └── architecture.md        
@@ -48,7 +49,6 @@ intelligent-qa/
 │   ├── run_backend.sh
 │   └── run_frontend.sh
 └── tests/
-    ├── .env.example
     ├── test_api.py
     ├── test_classifier.py
     └── test_agents.py

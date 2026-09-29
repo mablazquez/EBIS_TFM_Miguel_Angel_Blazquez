@@ -30,25 +30,29 @@ PROMPTS_DIR=data/prompts
 chmod +x scripts/run_backend.sh scripts/run_frontend.sh
 
 
-5. Iniciar los servicios (en 2 terminales independientes)
-Terminal 1 — Backend (FastAPI + Uvicorn):
+5. Ejecutar Test unitarios
 
-./scripts/run_backend.sh
+$env:PYTHONPATH = "."
+pytest
 
-Comando directo alternativo: uvicorn src.backend.main:app --host 0.0.0.0 --port 8000 --reload
 
-Estado: Valida la presencia de las plantillas en data/prompts/ y levanta el servidor en http://localhost:8000.
+6. Iniciar los servicios (en 2 terminales independientes)
 
-Documentación interactiva: http://localhost:8000/docs
+Terminal 1: Arrancar el Backend (FastAPI)
+En tu terminal de PowerShell, asegurándote de tener el entorno virtual activo:
 
-Terminal 2 — Frontend (Streamlit):
+$env:PYTHONPATH = "."
+uvicorn src.backend.main:app --host 0.0.0.0 --port 8000 --reload
 
-Abre una nueva ventana o pestaña de terminal, activa el entorno virtual y ejecuta:
+2. Terminal 2: Arrancar el Frontend (Streamlit)
+Abre una segunda ventana de PowerShell, navega a la carpeta del proyecto y ejecuta:
 
-source .venv/bin/activate
-./scripts/run_frontend.sh
+$env:PYTHONPATH = "."
+streamlit run src/frontend/app.py --server.port 8501
 
-Comando directo alternativo: streamlit run src/frontend/app.py --server.port 8501
+Se abrirá automáticamente tu navegador en: http://localhost:8501
 
-Interfaz de usuario: Se abrirá automáticamente en tu navegador en http://localhost:8501.
+En la esquina superior derecha verás el indicador verde: Backend Online.
+
+
 
