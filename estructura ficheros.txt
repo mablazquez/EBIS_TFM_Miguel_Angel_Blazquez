@@ -1,0 +1,53 @@
+intelligent-qa/
+├── .env.example
+├── .gitignore
+├── pytest.ini                 
+├── README.md
+├── requirements.txt
+├── docs/
+│   └── architecture.md        
+├── src/
+│   ├── frontend/
+│   │   ├── __init__.py
+│   │   ├── app.py
+│   │   ├── components.py
+│   │   └── api_client.py
+│   ├── backend/
+│   │   ├── __init__.py
+│   │   ├── main.py
+│   │   ├── routes.py
+│   │   └── schemas.py
+│   └── core/
+│       ├── __init__.py
+│       ├── config.py
+│       ├── logger.py
+│       └── agents/
+│           ├── __init__.py
+│           ├── classifier.py
+│           ├── requirements_agent.py
+│           ├── code_agent.py
+│           └── tools/
+│               ├── __init__.py
+│               ├── requirements_tools.py
+│               └── code_tools.py
+├── data/
+│   ├── prompts/
+│   │   ├── classifier_guardrail.txt
+│   │   ├── inconsistencies.txt
+│   │   ├── standards.txt
+│   │   ├── test_cases.txt
+│   │   ├── reverse_engineering.txt
+│   │   └── unit_tests.txt
+│   ├── sample_requirements/
+│   │   ├── valid_requirement.md
+│   │   └── ambiguous_requirement.md
+│   └── sample_code/
+│       ├── sample_order_service.java
+│       └── sample_discount_calculator.py
+├── scripts/
+│   ├── run_backend.sh
+│   └── run_frontend.sh
+└── tests/
+    ├── test_api.py
+    ├── test_classifier.py
+    └── test_agents.py
