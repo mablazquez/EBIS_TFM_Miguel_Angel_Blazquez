@@ -44,7 +44,7 @@ En tu terminal de PowerShell, asegurándote de tener el entorno virtual activo:
 $env:PYTHONPATH = "."
 uvicorn src.backend.main:app --host 0.0.0.0 --port 8000 --reload
 
-2. Terminal 2: Arrancar el Frontend (Streamlit)
+Terminal 2: Arrancar el Frontend (Streamlit)
 Abre una segunda ventana de PowerShell, navega a la carpeta del proyecto y ejecuta:
 
 $env:PYTHONPATH = "."
