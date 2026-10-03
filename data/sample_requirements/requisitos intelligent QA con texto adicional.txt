@@ -1,0 +1,146 @@
+Documento de Especificación de Requisitos Técnicos y Funcionales
+Proyecto: Intelligent QA (MVP)
+1. Información General y Objetivos
+●	Título del Proyecto: Intelligent QA — Asistente Inteligente para Aseguramiento de Calidad de Software con IA Generativa.
+●	Propósito del MVP: Construir una aplicación web modular en Python (FastAPI + Streamlit) que automatice tareas clave de aseguramiento de calidad (QA): análisis/validación de requisitos, generación de pruebas e ingeniería inversa de código legacy.
+●	Distribución: Repositorio público de GitHub preparado para la evaluación del tribunal de TFM.
+
+2. Stack Tecnológico y Configuración de IA
+●	Frontend: Streamlit (interfaz limpia, reactiva y orientada a la carga de ficheros con botones dinámicos).
+●	Backend: FastAPI (API RESTful para recepción de ficheros, orquestación y endpoints asíncronos).
+●	Framework de Agentes / Orquestación: LangGraph & LangChain (grafos de estado para la toma de decisiones, control de flujo y ejecución de tools).
+●	Modelo LLM Principal: gemini-3.8-flash vía Google GenAI / Gemini API.
+○	Rol del modelo: Su baja latencia y alta capacidad en ingeniería de software y uso de herramientas (tool-calling) permiten usarlo de forma unificada tanto para la clasificación/filtrado inicial de bajo coste como para las tareas agentic complejas de generación de tests y requisitos.
+●	Gestión de Entorno: Archivo .env para almacenar variables críticas (GEMINI_API_KEY, nivel de logs, puertos).
+●	Gestión y Externalización de Prompts: Todos los prompts de la aplicación (clasificador/guardrail, agentes y tools) deben residir de manera obligatoria y centralizada en archivos de texto dentro de la carpeta data/prompts/. Queda prohibido hardcodear prompts en el código fuente. Se implementará en src/core/config.py un mecanismo centralizado de carga de plantillas que permita resolver, validar y reutilizar los prompts de forma limpia y mantenible.
+
+
+3. Entradas, Validación Estricta y Manejo de Errores
+El sistema debe evitar la ambigüedad en la entrada mediante un filtro previo estricto (guardrail):
+●	Tipos de archivo soportados:
+1.	Código Fuente: Exclusivamente ficheros con extensiones .java o .py con sintaxis válida de Java o Python.
+2.	Documento de Requisitos: Ficheros de texto/markdown/documento que contengan una especificación de requisitos funcional estructurada.
+●	Reglas de Validación y Filtro (Guardrail):
+○	Un clasificador inicial analiza el archivo subido.
+○	Si el documento contiene fragmentos mixtos o código embebido sin ser un archivo de código fuente real, o si no se ajusta a un documento de requisitos válido, el sistema bloquea la ejecución.
+○	Mensaje de Error Requerido: En caso de no superar la validación, la interfaz debe mostrar el aviso:"La documentación adjunta no es un requisito ni un fichero de código fuente de Java o Python."
+
+4. Arquitectura de Agentes (LangGraph) y Casos de Uso
+La solución implementa dos agentes especializados mediante grafos de LangGraph, cada uno provisto de sus herramientas (tools) específicas:
+
+Amazon
+www.amazon.es › Libros
+Sobre nuestra publicidad
+Compra Online libro del quijote de la mancha en Amazon - Descubre las últimas novedades
+Patrocinado
+Gran Colección de Títulos. ¡Envío Gratis en Compras Superiores a 19€!
+Visitantes del sitio: Más de 1 millón el último mes
+ 
+Se incluyen resultados de texto de el quijote.
+¿Quieres obtener resultados solo de testo del quijote?
+
+Me gusta
+
+No me gusta
+"En un lugar de la Mancha, de cuyo nombre no quiero acordarme, no ha mucho tiempo que vivía un hidalgo de los de lanza en astillero, adarga antigua, rocín flaco y galgo corredor."
+Este es el inicio del capítulo primero de Don Quijote de la Mancha, donde se presenta al protagonista, un hidalgo de unos cincuenta años que, por su afición a los libros de caballerías, decide convertirse en caballero andante. La obra describe su vida cotidiana, su obsesión por los libros de caballerías y cómo esta pasión lo lleva a vender tierras para adquirir más libros, llenando su imaginación de aventuras, gigantes y héroes legendarios, hasta que decide emprender sus propias aventuras como Don Quijote 
+Centro Virtual Cervantes
+Centro Virtual Cervantes
++2
+.
+
+Contexto y características de la obra
+Miguel de Cervantes escribió El ingenioso hidalgo Don Quijote de la Mancha en dos partes, publicadas en 1605 y 1615. La novela es considerada una invectiva contra los libros de caballerías, pero también una obra que explora la locura y la lucidez del ser humano, combinando humor, crítica social y reflexión sobre la realidad y la ficción 
+www.rae.es
+www.rae.es
+. Don Quijote alterna entre actos disparatados y momentos de gran sensatez, lo que genera la fascinación y simpatía del lector.
+
+ 
+
+4.1. Flujo A: Agente de Requisitos
+Al confirmar un documento de requisitos válido, la interfaz despliega dinámicamente 3 botones:
+1.	Verificar inconsistencias del documento:
+○	Tool: check_document_inconsistencies
+○	Función: Detecta partes incompletas, ambigüedades, omisiones y contradicciones lógicas en el texto.
+2.	Verificar requisitos (Normativa):
+○	Tool: verify_requirements_standards
+○	Función: Evalúa cada requisito bajo criterios de calidad (que sean unívocos, atómicos, completos, verificables y técnicamente viables).
+3.	Generar casos de prueba:
+○	Tool: generate_test_cases
+○	Función: Diseña una matriz de pruebas que abarque casos positivos (happy path), casos negativos y condiciones límite (edge cases).
+4.2. Flujo B: Agente de Código Fuente (Legacy)
+Al confirmar un archivo de código válido (Java o Python), la interfaz despliega dinámicamente 2 botones:
+1.	Generar Requisitos (Ingeniería Inversa):
+○	Tool: reverse_engineer_requirements
+○	Función: Inspecciona la lógica del código fuente para extraer especificaciones funcionales y reglas de negocio actualizadas.
+2.	Generar Tests Unitarios:
+○	Tool: generate_unit_tests
+○	Función: Genera suites de pruebas unitarias automáticas (JUnit para Java, Pytest para Python) con cobertura sobre las funciones del archivo.
+
+5. Estructura del Proyecto y Requisitos No Funcionales
+El código debe seguir una arquitectura limpia, desacoplada y modular:
+
+Estructura del proyecto
+intelligent-qa/
+│
+├── .env.example              # Plantilla de variables de entorno (GEMINI_API_KEY, etc.)
+├── .gitignore
+├── README.md                 # Documentación de instalación, arquitectura y despliegue
+├── requirements.txt          # Dependencias comunes del proyecto
+│
+├── src/                      # CÓDIGO CORE Y APLICACIONES DEL SISTEMA
+│   ├── frontend/             # FRONTEND — aplicación Streamlit independiente
+│   │   ├── __init__.py
+│   │   ├── app.py            # Entrypoint de Streamlit
+│   │   ├── components.py     # Componentes visuales, descargas y avisos de error
+│   │   └── api_client.py     # Cliente HTTP para consumir exclusivamente la API FastAPI
+│   │
+│   ├── backend/              # BACKEND — API FastAPI independiente
+│   │   ├── __init__.py
+│   │   ├── main.py           # Instancia de FastAPI y middlewares
+│   │   ├── routes.py         # Endpoints de subida (/upload) y ejecución (/execute-task)
+│   │   └── schemas.py        # Modelos Pydantic para request/response
+│   │
+│   └── core/                 # FUNCIONALIDADES Y LÓGICA DE NEGOCIO
+│       ├── __init__.py
+│       ├── config.py         # Configuración y carga centralizada de prompts (pydantic-settings)
+│       ├── logger.py         # Configuración transversal del sistema de logs
+│       └── agents/           # Orquestación con LangGraph y Gemini 3.8 Flash
+│           ├── __init__.py
+│           ├── classifier.py # Clasificación y guardrail de entrada
+│           ├── requirements_agent.py
+│           ├── code_agent.py
+│           └── tools/        # Tools desacopladas para cada agente
+│               ├── __init__.py
+│               ├── requirements_tools.py
+│               └── code_tools.py
+│
+├── data/                     # Datos de evaluación y prompts centralizados
+│   ├── prompts/              # Plantillas de prompts del clasificador, agentes y tools
+│   ├── sample_requirements/  # Requisitos válidos y requisitos con trampas/ambigüedades
+│   └── sample_code/          # Ejemplos en Java y Python
+│
+├── docs/                     # Memoria del TFM, diagramas y especificaciones
+│
+├── scripts/                  # Scripts de inicialización, ejecución y despliegue
+│   ├── run_backend.sh
+│   └── run_frontend.sh
+│
+└── tests/                    # Pruebas automatizadas del sistema (Pytest)
+    ├── test_api.py
+    ├── test_classifier.py
+    └── test_agents.py
+
+6. Sistema de Trazabilidad y Logs
+●	Implementar un logger estructurado en src/core/logger.py.
+●	Registrar cada fase del ciclo de vida:
+○	Recepción del fichero y metadatos (tamaño, extensión).
+○	Veredicto del clasificador inicial (fichero aceptado o rechazado).
+○	Llamadas a gemini-3.8-flash y ejecución de tools en LangGraph.
+○	Tiempos de respuesta y excepciones capturadas.
+
+7. Estrategia de Evaluación y Validación (TFM)
+Para garantizar una evaluación rigurosa del tribunal académico:
+●	La carpeta data/ debe contener casos de prueba de referencia (ground truth):
+○	Requisitos con ambigüedades conocidas para validar si el agente las detecta con precisión.
+○	Ficheros Java/Python de comportamiento conocido para evaluar la cobertura y corrección de los tests generados y de los requisitos inferidos.
