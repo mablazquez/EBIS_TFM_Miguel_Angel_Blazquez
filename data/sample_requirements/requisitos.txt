@@ -1,0 +1,85 @@
+## **1. Descripción general del sistema**
+La aplicación permitirá a un usuario crear, editar, marcar como completadas y eliminar tareas. No tendrá funciones avanzadas como sincronización en la nube, múltiples usuarios o recordatorios.
+
+---
+
+## **2. Requisitos funcionales (RF)**  
+Cada requisito está redactado de forma **no ambigua, verificable, trazable y completa**.
+
+- **RF‑01 — Registro de tareas**  
+  La aplicación debe permitir al usuario crear una nueva tarea introduciendo un título obligatorio de hasta 100 caracteres.
+
+- **RF‑02 — Descripción opcional**  
+  La aplicación debe permitir añadir una descripción opcional de hasta 500 caracteres a cada tarea.
+
+- **RF‑03 — Listado de tareas**  
+  La aplicación debe mostrar al usuario una lista con todas las tareas creadas, ordenadas por fecha de creación (más reciente primero).
+
+- **RF‑04 — Marcar tarea como completada**  
+  La aplicación debe permitir al usuario marcar una tarea como completada mediante un control visual (checkbox).
+
+- **RF‑05 — Edición de tareas**  
+  La aplicación debe permitir modificar el título y la descripción de una tarea existente.
+
+- **RF‑06 — Eliminación de tareas**  
+  La aplicación debe permitir eliminar una tarea de forma permanente mediante una acción explícita del usuario.
+
+- **RF‑07 — Persistencia local**  
+  La aplicación debe almacenar todas las tareas localmente en el dispositivo para que permanezcan disponibles tras cerrar y abrir la aplicación.
+
+---
+
+## **3. Requisitos no funcionales (RNF)**  
+Redactados para cumplir los atributos ISO: medibles, verificables, claros y sin ambigüedad.
+
+### **3.1 Seguridad**
+- **RNF‑01 — Integridad de datos**  
+  La aplicación debe garantizar que los datos almacenados localmente no se corrompen durante operaciones de lectura o escritura.
+
+### **3.2 Rendimiento**
+- **RNF‑02 — Tiempo de respuesta**  
+  La aplicación debe mostrar la lista de tareas en menos de **0,5 segundos** desde su apertura.
+
+- **RNF‑03 — Creación de tareas**  
+  La creación de una tarea debe completarse en menos de **0,2 segundos** desde la acción del usuario.
+
+### **3.3 Usabilidad**
+- **RNF‑04 — Interfaz clara**  
+  La aplicación debe presentar todos los controles principales (crear, editar, eliminar, marcar completada) visibles en la pantalla principal sin necesidad de menús ocultos.
+
+- **RNF‑05 — Accesibilidad básica**  
+  La aplicación debe permitir un tamaño mínimo de fuente de **14 px** y contrastes que cumplan **WCAG AA**.
+
+### **3.4 Mantenibilidad**
+- **RNF‑06 — Estructura modular**  
+  El código debe estar organizado en módulos independientes para gestión de datos, interfaz y lógica de negocio.
+
+### **3.5 Fiabilidad**
+- **RNF‑07 — Recuperación ante fallo**  
+  Si la aplicación se cierra inesperadamente, al reiniciarse debe cargar el último estado guardado sin pérdida de información.
+
+---
+
+## **4. Requisitos de interfaz**
+- **RI‑01 — Interfaz de usuario**  
+  La aplicación debe ejecutarse en una ventana única con una vista principal que muestre la lista de tareas y un botón para crear nuevas tareas.
+
+- **RI‑02 — Interfaz de almacenamiento**  
+  La aplicación debe utilizar un archivo local en formato JSON para almacenar las tareas.
+
+---
+
+## **5. Criterios de verificación**
+- Cada requisito funcional se verificará mediante pruebas de caja negra.  
+- Los requisitos no funcionales se verificarán mediante mediciones de rendimiento, inspección de código y pruebas de accesibilidad.  
+- Los requisitos de interfaz se verificarán mediante inspección visual y pruebas de integración.
+
+---
+
+## **6. Trazabilidad**
+Cada requisito está identificado con un código único (RF‑xx, RNF‑xx, RI‑xx) que permite su trazabilidad hacia:
+- Casos de uso
+- Pruebas
+- Componentes de diseño
+- Módulos de implementación
+
