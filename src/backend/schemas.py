@@ -1,6 +1,6 @@
 """
 Esquemas Pydantic para el API REST de Intelligent QA.
-Define contratos de entrada y salida para clasificación y ejecución de agentes.
+Define formularios de entrada y salida para clasificación y ejecución de agentes.
 """
 
 from typing import Any, Dict, List, Literal, Optional
@@ -38,7 +38,7 @@ class ClassificationResponse(BaseModel):
     reason: str = Field(..., description="Explicación técnica de la clasificación")
     rejection_message: Optional[str] = Field(
         default=None,
-        description="Mensaje mandatario si el archivo es rechazado por el guardrail"
+        description="Mensaje si el archivo es rechazado por el guardrail"
     )
     content: Optional[str] = Field(
         default=None,
