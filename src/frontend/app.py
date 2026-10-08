@@ -93,7 +93,7 @@ if not st.session_state.uploaded_filename:
     st.info(
         "👋 **Bienvenido al entorno de pruebas de Intelligent QA.**\n\n"
         "Para comenzar, sube un archivo desde la barra lateral izquierda:\n"
-        "- **Especificación de Requisitos:** `.md` o `.txt` con historias de usuario o SRS.\n"
+        "- **Especificación de Requisitos:** `.md` o `.txt` con historias de usuario o especificación de requisitos.\n"
         "- **Código Fuente Legacy:** `.java` o `.py` estructurado.\n\n"
         "*Cualquier archivo informal o mixto será bloqueado de inmediato por el guardrail de entrada.*"
     )
